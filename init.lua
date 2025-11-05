@@ -29,57 +29,29 @@ vim.opt.clipboard = "unnamedplus"
 -- Detect if running on Windows
 local transparent = vim.loop.os_uname().version:match("Windows")
 
-
-
--- Transparency (only if NOT Windows)
+-- Transparency function
 local function apply_transparency()
-  if transparent then
-    vim.cmd [[
-      hi Normal guibg=NONE ctermbg=NONE
-      hi NormalNC guibg=NONE ctermbg=NONE
-      hi SignColumn guibg=NONE
-      hi VertSplit guibg=NONE
-      hi StatusLine guibg=NONE
-      hi EndOfBuffer guibg=NONE
-
-      hi NvimTreeNormal guibg=NONE ctermbg=NONE
-      hi NvimTreeNormalNC guibg=NONE ctermbg=NONE
-      hi NvimTreeVertSplit guibg=NONE ctermbg=NONE
-      hi NvimTreeEndOfBuffer guibg=NONE ctermbg=NONE
-
-      hi NormalFloat guibg=NONE ctermbg=NONE
-      hi FloatBorder guibg=NONE ctermbg=NONE
-    ]]
-  else
-    vim.cmd [[
-      hi clear Normal
-      hi clear NormalNC
-      hi clear SignColumn
-      hi clear VertSplit
-      hi clear StatusLine
-      hi clear EndOfBuffer
-      hi clear NvimTreeNormal
-      hi clear NvimTreeNormalNC
-      hi clear NvimTreeVertSplit
-      hi clear NvimTreeEndOfBuffer
-      hi clear NormalFloat
-      hi clear FloatBorder
-      colorscheme tokyonight-storm
-    ]]
-  end
+  vim.cmd [[
+    hi Normal guibg=NONE ctermbg=NONE
+    hi NormalNC guibg=NONE ctermbg=NONE
+    hi SignColumn guibg=NONE
+    hi VertSplit guibg=NONE
+    hi StatusLine guibg=NONE
+    hi EndOfBuffer guibg=NONE
+    hi NvimTreeNormal guibg=NONE ctermbg=NONE
+    hi NvimTreeNormalNC guibg=NONE ctermbg=NONE
+    hi NvimTreeVertSplit guibg=NONE ctermbg=NONE
+    hi NvimTreeEndOfBuffer guibg=NONE ctermbg=NONE
+    hi NormalFloat guibg=NONE ctermbg=NONE
+    hi FloatBorder guibg=NONE ctermbg=NONE
+  ]]
 end
-
 
 vim.api.nvim_create_user_command("Trans", function()
   transparent = not transparent
   apply_transparency()
   print("Transparency " .. (transparent and "enabled" or "disabled"))
 end, {})
-
-
-apply_transparency()
-
-
 
 -- Plugins
 require("lazy").setup({
@@ -122,14 +94,15 @@ require("lazy").setup({
     end
   },
   -- Color theme
-  { "folke/tokyonight.nvim", lazy = false, priority = 1000, config = function()
-      vim.cmd("colorscheme tokyonight-storm")
-    end },
+  { "folke/tokyonight.nvim", lazy = false, priority = 1000 },
 })
 
+-- Apply colorscheme and transparency
+vim.cmd("colorscheme tokyonight-storm")
+apply_transparency()
 
+-- Telescope keymaps
 local builtin = require("telescope.builtin")
-
 vim.keymap.set("n", "<Space>ff", builtin.find_files, { desc = "Find files" })
 vim.keymap.set("n", "<Space>fg", builtin.buffers, { desc = "Recently opened files" })
 
@@ -144,14 +117,11 @@ vim.keymap.set("t", "<Esc>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
 require("toggleterm").setup({
   open_mapping = [[<Space>tt]],
   direction = "float",
-  float_opts = {
-    border = "curved",
-  },
+  float_opts = { border = "curved" },
   shade_terminals = true,
   start_in_insert = true,
   insert_mappings = true,
 })
-
 
 -- Autopairs integration
 local cmp_autopairs = require("nvim-autopairs.completion.cmp")
@@ -160,16 +130,50 @@ cmp.event:on("confirm_done", cmp_autopairs.on_confirm_done())
 
 -- Mason + LSP setup
 require("mason-lspconfig").setup({
-  ensure_installed = { "ts_ls", "html", "cssls", "jsonls", "tailwindcss", "emmet_language_server" },
+  ensure_installed = {
+    "ts_ls", "html", "cssls", "jsonls", "tailwindcss",
+    "emmet_language_server", "pasls"
+  },
 })
 
 local capabilities = require("cmp_nvim_lsp").default_capabilities()
 
+-- LSP configurations
 vim.lsp.config["emmet_language_server"] = {
   filetypes = { "html", "typescriptreact", "javascriptreact", "css", "sass", "scss", "less" },
   capabilities = capabilities,
 }
 vim.lsp.enable("emmet_language_server")
+
+vim.lsp.config["tsserver"] = {
+  capabilities = capabilities,
+  filetypes = { "typescript", "typescriptreact", "javascript", "javascriptreact" },
+}
+vim.lsp.config["html"] = { capabilities = capabilities }
+vim.lsp.config["cssls"] = { capabilities = capabilities }
+vim.lsp.config["jsonls"] = { capabilities = capabilities }
+vim.lsp.config["tailwindcss"] = { capabilities = capabilities }
+
+-- Pascal LSP
+vim.lsp.config["pasls"] = {
+  capabilities = capabilities,
+  filetypes = { "pascal", "objectpascal" },
+  settings = {
+    pasls = {
+      codeTools = {
+        formatOnSave = true,
+        diagnostics = true,
+        autoFix = true,
+      },
+    },
+  },
+}
+vim.lsp.enable("tsserver")
+vim.lsp.enable("html")
+vim.lsp.enable("cssls")
+vim.lsp.enable("jsonls")
+vim.lsp.enable("tailwindcss")
+vim.lsp.enable("pasls")
 
 -- Autocomplete setup
 cmp.setup({
@@ -202,22 +206,7 @@ cmp.setup({
   }),
 })
 
--- LSP config
-vim.lsp.config["tsserver"] = {
-  capabilities = capabilities,
-  filetypes = { "typescript", "typescriptreact", "javascript", "javascriptreact" },
-}
-vim.lsp.config["html"] = { capabilities = capabilities }
-vim.lsp.config["cssls"] = { capabilities = capabilities }
-vim.lsp.config["jsonls"] = { capabilities = capabilities }
-vim.lsp.config["tailwindcss"] = { capabilities = capabilities }
-
-vim.lsp.enable("tsserver")
-vim.lsp.enable("html")
-vim.lsp.enable("cssls")
-vim.lsp.enable("jsonls")
-vim.lsp.enable("tailwindcss")
-
+-- Treesitter setup
 require("nvim-treesitter.configs").setup({
   highlight = { enable = true },
   autotag = { enable = true },
@@ -228,7 +217,3 @@ vim.api.nvim_create_autocmd("ColorScheme", {
   pattern = "*",
   callback = apply_transparency,
 })
-
--- set colorscheme and apply transparency if possible
-vim.cmd("colorscheme tokyonight-storm")
-apply_transparency()
